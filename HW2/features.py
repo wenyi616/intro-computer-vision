@@ -98,7 +98,6 @@ class HarrisKeypointDetector(KeypointDetector):
         # each pixel and store in 'harrisImage'.  See the project page
         # for direction on how to do this. Also compute an orientation
         # for each pixel and store it in 'orientationImage.'
-        # TODO-BLOCK-BEGIN
 
         x = scipy.ndimage.sobel(
             srcImage, axis=1, output=None, mode='reflect', cval=0)
@@ -134,14 +133,11 @@ class HarrisKeypointDetector(KeypointDetector):
         destImage = np.zeros_like(harrisImage, np.bool)
 
         # TODO 2: Compute the local maxima image
-        # TODO-BLOCK-BEGIN
-        # raise Exception("TODO 2: in features.py not implemented")
 
         maxValue = scipy.ndimage.filters.maximum_filter(
             harrisImage, size=(7, 7))
+        
         destImage = harrisImage == maxValue
-
-        # TODO-BLOCK-END
 
         return destImage
 
@@ -183,18 +179,15 @@ class HarrisKeypointDetector(KeypointDetector):
 
                 f = cv2.KeyPoint()
 
-                f.pt = (x, y)
-                f.size = 10
-                f.angle = orientationImage[y][x]
-                f.response = harrisImage[y][x]
-
                 # TODO 3: Fill in feature f with location and orientation
                 # data here. Set f.size to 10, f.pt to the (x,y) coordinate,
                 # f.angle to the orientation in degrees and f.response to
                 # the Harris score
-                # TODO-BLOCK-BEGIN
-                # raise Exception("TODO 3: in features.py not implemented")
-                # TODO-BLOCK-END
+
+                f.pt = (x, y)
+                f.size = 10
+                f.angle = orientationImage[y][x]
+                f.response = harrisImage[y][x]
 
                 features.append(f)
 
@@ -218,7 +211,6 @@ class ORBKeypointDetector(KeypointDetector):
 
 ## Feature descriptors #########################################################
 
-
 class FeatureDescriptor(object):
     # Implement in child classes
     def describeFeatures(self, image, keypoints):
@@ -235,7 +227,6 @@ class FeatureDescriptor(object):
 
 
 class SimpleFeatureDescriptor(FeatureDescriptor):
-    # TODO: Implement parts of this function
     def describeFeatures(self, image, keypoints):
         '''
         Input:
@@ -252,19 +243,29 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
 
         for i, f in enumerate(keypoints):
             x, y = int(f.pt[0]), int(f.pt[1])
+            
+            ymax = np.size(grayImage,0)
+            xmax = np.size(grayImage,1)
 
             # TODO 4: The simple descriptor is a 5x5 window of intensities
             # sampled centered on the feature point. Store the descriptor
             # as a row-major vector. Treat pixels outside the image as zero.
-            # TODO-BLOCK-BEGIN
-            raise Exception("TODO 4: in features.py not implemented")
-            # TODO-BLOCK-END
-
+                        
+            for yy in range(y - 2, y + 3):
+                for xx in range(x - 2, x + 3):
+                    yindex = yy - y + 2
+                    xindex = xx - x + 2
+                    num = xindex + yindex*5
+                    if yy < 0 or xx < 0 or yy >= ymax or xx >= xmax:
+                        # treat pixels outside the image as zero
+                        desc[i, num] = 0
+                    else:
+                        # pixel intensity values in the 5x5 neighborhood
+                        desc[i, num] = grayImage[yy, xx]
         return desc
 
 
 class MOPSFeatureDescriptor(FeatureDescriptor):
-    # TODO: Implement parts of this function
     def describeFeatures(self, image, keypoints):
         '''
         Input:
@@ -277,6 +278,7 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
         '''
         image = image.astype(np.float32)
         image /= 255.
+        
         # This image represents the window around the feature you need to
         # compute to store as the feature descriptor (row-major)
         windowSize = 8
@@ -291,10 +293,21 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
             # the feature to the appropriate pixels in the 8x8 feature
             # descriptor image.
             transMx = np.zeros((2, 3))
+            
+            x, y = int(f.pt[0]), int(f.pt[1])
+            theta = np.deg2rad(f.angle)
 
-            # TODO-BLOCK-BEGIN
-            raise Exception("TODO 5: in features.py not implemented")
-            # TODO-BLOCK-END
+            # transformation matrix
+            T1 = transformations.get_trans_mx(np.array([-x,-y,0]))
+            R  = transformations.get_rot_mx(0, 0, -theta)
+            S  = transformations.get_scale_mx(.2, .2, 1)
+            T2 = transformations.get_trans_mx(np.array([4,4,0]))
+
+            # transMx[0]: [ [0][0], [0][1], [0][3] ]
+            # transMx[1]: [ [1][0], [1][1], [1][3] ]
+            transMx = np.dot(np.dot(np.dot(T2, S), R),T1)[:2, [0, 1, 3]]
+
+
 
             # Call the warp affine function to do the mapping
             # It expects a 2x3 matrix
@@ -305,9 +318,15 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
             # variance. If the variance is negligibly small (which we
             # define as less than 1e-10) then set the descriptor
             # vector to zero. Lastly, write the vector to desc.
-            # TODO-BLOCK-BEGIN
-            raise Exception("TODO 6: in features.py not implemented")
-            # TODO-BLOCK-END
+            
+            std = np.std(destImage)  
+            mean = np.mean(destImage)
+
+            # if the variance is very close to zero (less than 10-10 in magnitude) 
+            if std <1e-5:
+                desc[i] = (np.zeros(np.shape(destImage))).flatten()
+            else:
+                desc[i] = ((destImage - mean) / std).flatten()
 
         return desc
 
