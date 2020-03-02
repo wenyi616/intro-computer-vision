@@ -450,9 +450,18 @@ class SSDFeatureMatcher(FeatureMatcher):
         # the first image with the closest feature in the second image.
         # Note: multiple features from the first image may match the same
         # feature in the second image.
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO 7: in features.py not implemented")
-        # TODO-BLOCK-END
+        ecli_dis = scipy.spatial.distance.cdist(desc1, desc2, 'euclidean')
+
+        min_ecli = ecli_dis.argmin(1)
+
+        length = desc1.shape[0]
+
+        for i in range(length):
+            match_feature = cv2.DMatch()
+            match_feature.queryIdx = i
+            match_feature.trainIdx = min_ecli[i]
+            match_feature.distance = ecli_dis[i][match_feature.trainIdx]
+            matches.append(match_feature)
 
         return matches
 
@@ -492,9 +501,25 @@ class RatioFeatureMatcher(FeatureMatcher):
         # Note: multiple features from the first image may match the same
         # feature in the second image.
         # You don't need to threshold matches in this function
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO 8: in features.py not implemented")
-        # TODO-BLOCK-END
+        
+        ecli_dis = scipy.spatial.distance.cdist(desc1, desc2, 'euclidean')
+
+        min_dis = np.argmin(ecli_dis, axis=1)
+
+        for i in range(len(min_dis)):
+            dist_i = ecli_dis[i]
+            best_Match = min_dis[i]
+            best_Dis = np.amin(dist_i)
+
+            dist_i[min_dis[i]] = float(1000000)
+            best_Match_later = np.argmin(dist_i)
+            best_Dis_later = np.amin(dist_i)
+
+            Dis_ratio = best_Dis/float(best_Dis_later)
+
+            m = cv2.DMatch(
+                _queryIdx=i, _trainIdx=min_dis[i], _distance=Dis_ratio)
+            matches.append(m)
 
         return matches
 
