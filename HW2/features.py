@@ -99,11 +99,15 @@ class HarrisKeypointDetector(KeypointDetector):
         # for direction on how to do this. Also compute an orientation
         # for each pixel and store it in 'orientationImage.'
 
+        # scipy.ndimage.sobel: 
+        # Filters the input image with Sobel filter.
         x = scipy.ndimage.sobel(
             srcImage, axis=1, output=None, mode='reflect', cval=0)
         y = scipy.ndimage.sobel(
             srcImage, axis=0, output=None, mode='reflect', cval=0)
 
+        # scipy.ndimage.gaussian_filter: 
+        # Filters the input image with a Gaussian filter.
         A = scipy.ndimage.filters.gaussian_filter(x**2, 0.5)
         B = scipy.ndimage.filters.gaussian_filter(x*y, 0.5)
         C = scipy.ndimage.filters.gaussian_filter(y**2, 0.5)
@@ -134,6 +138,8 @@ class HarrisKeypointDetector(KeypointDetector):
 
         # TODO 2: Compute the local maxima image
 
+        # scipy.ndimage.filters.maximum_filter: 
+        # Filters the input image with a maximum filter.
         maxValue = scipy.ndimage.filters.maximum_filter(
             harrisImage, size=(7, 7))
         
@@ -450,17 +456,29 @@ class SSDFeatureMatcher(FeatureMatcher):
         # the first image with the closest feature in the second image.
         # Note: multiple features from the first image may match the same
         # feature in the second image.
-        ecli_dis = scipy.spatial.distance.cdist(desc1, desc2, 'euclidean')
 
-        min_ecli = ecli_dis.argmin(1)
+        # ecli_dis = scipy.spatial.distance.cdist(desc1, desc2, 'euclidean')
 
-        length = desc1.shape[0]
+        # min_ecli = ecli_dis.argmin(1)
 
-        for i in range(length):
+        # length = desc1.shape[0]
+
+        # for i in range(length):
+        #     match_feature = cv2.DMatch()
+        #     match_feature.queryIdx = i
+        #     match_feature.trainIdx = min_ecli[i]
+        #     match_feature.distance = ecli_dis[i][match_feature.trainIdx]
+        #     matches.append(match_feature)
+
+        # return matches
+        for i, feature1 in enumerate(desc1):
             match_feature = cv2.DMatch()
             match_feature.queryIdx = i
-            match_feature.trainIdx = min_ecli[i]
-            match_feature.distance = ecli_dis[i][match_feature.trainIdx]
+            for j, feature2 in enumerate(desc2):
+                dist = np.sum(np.square(feature1 - feature2))
+                if dist < match_feature.distance:
+                    match_feature.distance = dist
+                    match_feature.trainIdx = j
             matches.append(match_feature)
 
         return matches
@@ -501,7 +519,7 @@ class RatioFeatureMatcher(FeatureMatcher):
         # Note: multiple features from the first image may match the same
         # feature in the second image.
         # You don't need to threshold matches in this function
-        
+
         ecli_dis = scipy.spatial.distance.cdist(desc1, desc2, 'euclidean')
 
         min_dis = np.argmin(ecli_dis, axis=1)
