@@ -38,13 +38,30 @@ def computeHomography(f1, f2, matches, A_out=None):
         (a_x, a_y) = f1[m.queryIdx].pt
         (b_x, b_y) = f2[m.trainIdx].pt
 
-        #BEGIN TODO 2
-        #Fill in the matrix A in this loop.
-        #Access elements using square brackets. e.g. A[0,0]
+        #TODO 2
         #TODO-BLOCK-BEGIN
-        raise Exception("TODO in alignment.py not implemented")
+        a = 2 * i
+
+        A[a][0] = a_x
+        A[a][1] = a_y
+        A[a][2] = 1
+        A[a][3] = 0
+        A[a][4] = 0
+        A[a][5] = 0
+        A[a][6] = -a_x * b_x
+        A[a][7] = -a_y * b_x
+        A[a][8] = -b_x
+
+        A[a + 1][0] = 0
+        A[a + 1][1] = 0
+        A[a + 1][2] = 0
+        A[a + 1][3] = a_x
+        A[a + 1][4] = a_y
+        A[a + 1][5] = 1
+        A[a + 1][6] = -a_x * b_y
+        A[a + 1][7] = -a_y * b_y
+        A[a + 1][8] = -b_y
         #TODO-BLOCK-END
-        #END TODO
 
     U, s, Vt = np.linalg.svd(A)
 
@@ -59,12 +76,10 @@ def computeHomography(f1, f2, matches, A_out=None):
     #Homography to be calculated
     H = np.eye(3)
 
-    #BEGIN TODO 3
-    #Fill the homography H with the appropriate elements of the SVD
-    #TODO-BLOCK-BEGIN
-    raise Exception("TODO in alignment.py not implemented")
-    #TODO-BLOCK-END
-    #END TODO
+    # TODO 3: Fill the homography H with the appropriate elements of the SVD
+    # TODO-BLOCK-BEGIN
+    H = Vt[:][-1].reshape((3,3))
+    # TODO-BLOCK-END
 
     return H
 
@@ -92,20 +107,46 @@ def alignPair(f1, f2, matches, m, nRANSAC, RANSACthresh):
         and return as a transformation matrix M.
     '''
 
-    #BEGIN TODO 4
-    #Write this entire method.  You need to handle two types of
-    #motion models, pure translations (m == eTranslation) and
-    #full homographies (m == eHomography).  However, you should
-    #only have one outer loop to perform the RANSAC code, as
-    #the use of RANSAC is almost identical for both cases.
-
-    #Your homography handling code should call compute_homography.
-    #This function should also call get_inliers and, at the end,
-    #least_squares_fit.
+    # TODO 4
+    # Helper functions include compute_homography, get_inliers, and least_squares_fit.
+    
     #TODO-BLOCK-BEGIN
-    raise Exception("TODO in alignment.py not implemented")
+    
+    for i in range(nRANSAC):
+        # pure translations (m == eTranslation)
+        if m == eTranslate:
+            
+            sample = random.sample( range(0,len(matches)-1) , 1)
+            (x1, y1) = f1[matches[sample[0]].queryIdx].pt
+            (x2, y2) = f2[matches[sample[0]].trainIdx].pt
+            tmp = np.array([[1, 0, x1-x2], [0, 1, y1-y2], [0, 0, 1]])
+        
+        # full homographies (m == eHomography)
+        elif m == eHomography:
+            samples = []
+            samples.append(random.sample( range(0,len(matches)-1) , 1))
+            samples.append(random.sample( range(0,len(matches)-1) , 1))
+            samples.append(random.sample( range(0,len(matches)-1) , 1))
+            samples.append(random.sample( range(0,len(matches)-1) , 1))
+
+            for sample in samples:
+                new_match = []
+                new_match.append(matches[sample[0]])
+
+            tmp = computeHomography(f1,f2,new_match)
+        
+    max_in = -1
+    inliers = []
+        
+    inlier = getInliers(f1, f2, matches, tmp, RANSACthresh)
+    print(inlier)
+
+    if  len(inlier) > max_in:
+        max_in = len(inlier)
+        best_inlier = inlier
+    
+    M = leastSquaresFit(f1, f2, matches, m, best_inlier)
     #TODO-BLOCK-END
-    #END TODO
     return M
 
 def getInliers(f1, f2, matches, M, RANSACthresh):
