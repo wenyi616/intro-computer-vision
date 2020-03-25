@@ -174,13 +174,20 @@ def getInliers(f1, f2, matches, M, RANSACthresh):
     inlier_indices = []
 
     for i in range(len(matches)):
-        #BEGIN TODO 5
-        #Determine if the ith matched feature f1[id1], when transformed
-        #by M, is within RANSACthresh of its match in f2.
-        #If so, append i to inliers
-        #TODO-BLOCK-BEGIN
-        raise Exception("TODO in alignment.py not implemented")
-        #TODO-BLOCK-END
+        # TODO 5: Determine if the ith matched feature f1[id1] is an inlier
+        pt1 = np.array(f1[i].pt)
+        pt2 = np.array(f2[i].pt)
+        pt3 = np.array([pt1[0],pt1[1],1]).T
+
+        # transformed by M
+        x,y,_ = np.dot(M,pt3)
+        
+        # within RANSACthresh of its match in f2.
+        dist = np.linalg.norm(np.array([x,y])-pt2)
+
+        # append i to inliers
+        if dist < RANSACthresh:
+            inlier_indices.append(i)
         #END TODO
 
     return inlier_indices
@@ -220,12 +227,10 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
         v = 0.0
 
         for i in range(len(inlier_indices)):
-            #BEGIN TODO 6
-            #Use this loop to compute the average translation vector
-            #over all inliers.
-            #TODO-BLOCK-BEGIN
-            raise Exception("TODO in alignment.py not implemented")
-            #TODO-BLOCK-END
+            #TODO 6: (loop) compute the average translation vector over all inliers
+            inlier = matches[inlier_indices[i]]
+            u = u + f2[inlier.trainIdx].pt[0] - f1[inlier.queryIdx].pt[0]
+            v = v + f2[inlier.trainIdx].pt[1] - f1[inlier.queryIdx].pt[1]
             #END TODO
 
         u /= len(inlier_indices)
@@ -235,12 +240,11 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
         M[1,2] = v
 
     elif m == eHomography:
-        #BEGIN TODO 7
-        #Compute a homography M using all inliers.
-        #This should call computeHomography.
-        #TODO-BLOCK-BEGIN
-        raise Exception("TODO in alignment.py not implemented")
-        #TODO-BLOCK-END
+        #TODO 7: compute a homography M using all inliers.
+        inlier_matches = []
+        for i in inlier_indices:
+            inlier_matches.append(matches[i])
+        M = computeHomography(f1 , f2, inlier_matches)
         #END TODO
 
     else:
