@@ -35,6 +35,7 @@ def imageBoundingBox(img, M):
     res = res / res[-1]
     minX, minY, _ = np.min(res, axis=1)
     maxX, maxY, _ = np.max(res, axis=1)
+    # TODO-BLOCK-END
 
     return int(minX), int(minY), int(maxX), int(maxY)
 
@@ -52,34 +53,51 @@ def accumulateBlend(img, acc, M, blendWidth):
          and the fourth channel of acc records a sum of the weights
     """
     # BEGIN TODO 10
-    h, w = img.shape[:2]
-    h_acc, w_acc = acc.shape[:2]
+    r, c = acc.shape[:2]
+    rows, cols = img.shape[:2]
+    img = cv2.copyMakeBorder(img, 0, r - rows, 0, c - cols, cv2.BORDER_CONSTANT, value=0)
+
+    row, col, _ = img.shape
+    x_range = np.arange(col)
+    y_range = np.arange(row)
+
+    x_grid, y_grid = np.meshgrid(x_range, y_range)
+    ones = np.ones((row, col))
     
-    boundings = imageBoundingBox(img, M)
+    # homogeneous coordinates
+    homoco = np.dstack((x_grid, y_grid, ones))
+    homoco = homoco.reshape((col * row, 3))
+    homoco = homoco.T
+    projection = np.linalg.inv(M).dot(homoco) 
 
-    for i in range(boundings[0],boundings[2],1):
-        for j in range(boundings[1],boundings[3],1):
+    # convert back to img plane
+    projection = projection / projection[2]
+    x = projection[0].reshape((row, col)).astype(np.float32)
+    y = projection[1].reshape((row, col)).astype(np.float32)
 
-            p = np.array([i, j, 1.])
-            p = np.dot(inv(M),p)
-            newx = min(p[0] / p[2], w-1)
-            newy = min(p[1] / p[2], h-1)
-            
-            if newx <0 or newx >= w or newy < 0 or newy >= h:
-                continue
-            if img[int(newy), int(newx), 0] == 0 and img[int(newy), int(newx), 1] ==0 and img[int(newy), int(newx), 2] == 0:
-                continue
-            if newx >= 0 and newx < w-1 and newy >= 0 and newy < h-1:    
-                alpha = 1.0
-                if newx >= boundings[0] and newx - blendWidth < boundings[0]:
-                    alpha = 1. * (newx - boundings[0]) / blendWidth
-                if newx <= boundings[2] and newx + blendWidth > boundings[2]:
-                    alpha = 1. * (boundings[2] - newx) / blendWidth
-                acc[j,i,3] += alpha
+    minX, minY, maxX, maxY = imageBoundingBox(img, M)
 
-                for k in range(3):
-                    acc[j,i,k] += img[int(newy),int(newx),k] * alpha
+    img_warped = cv2.remap(img, x, y, cv2.INTER_LINEAR)
+    img_masked = np.dstack((img_warped, np.ones((img_warped.shape[0], img_warped.shape[1], 1)) ))
 
+    base = np.linspace(-minX / blendWidth, (c - minX -1) / blendWidth, c )
+
+    # feathering: linear interpolation
+    right = np.clip(base , 0, 1).reshape((1, c, 1))
+    left = np.ones((1, c, 1)) - right
+
+    feathered_img = right * img_masked
+    acc *= left
+
+    grayimg = cv2.cvtColor(img_warped, cv2.COLOR_BGR2GRAY)
+    maskimg = (grayimg != 0).reshape((r, c, 1))
+    img_masked = maskimg * feathered_img
+
+    grayacc = cv2.cvtColor(acc[:, :, :3].astype(np.uint8), cv2.COLOR_BGR2GRAY)
+    maskacc = (grayacc != 0).reshape((r, c, 1))
+    
+    acc *= maskacc
+    acc += img_masked
     
     # END TODO
 
@@ -228,15 +246,14 @@ def blendImages(ipv, blendWidth, is360=False, A_out=None):
     x_init, y_init, x_final, y_final = getDriftParams(ipv, translation, width)
     # Compute the affine transform
     A = np.identity(3)
-    # BEGIN TODO 12
+    # TODO 12
 
     # Note: warpPerspective does forward mapping which means A is an affine
     # transform that maps accumulator coordinates to final panorama coordinates
-    #TODO-BLOCK-BEGIN
     # if this is a 360 panorama
+
     if is360:
         A = computeDrift(x_init, y_init, x_final, y_final, width)
-    #TODO-BLOCK-END
     # END TODO
 
     if A_out is not None:
