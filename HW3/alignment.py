@@ -110,43 +110,30 @@ def alignPair(f1, f2, matches, m, nRANSAC, RANSACthresh):
     # TODO 4
     # Helper functions include compute_homography, get_inliers, and least_squares_fit.
     
-    #TODO-BLOCK-BEGIN
-    
+    best_inlier = []
     for i in range(nRANSAC):
         # pure translations (m == eTranslation)
         if m == eTranslate:
-            
-            sample = random.sample( range(0,len(matches)-1) , 1)
-            (x1, y1) = f1[matches[sample[0]].queryIdx].pt
-            (x2, y2) = f2[matches[sample[0]].trainIdx].pt
-            tmp = np.array([[1, 0, x1-x2], [0, 1, y1-y2], [0, 0, 1]])
+            sample = random.randint(0, len(matches) - 1)            
+            (x1, y1) = f1[matches[sample].queryIdx].pt
+            (x2, y2) = f2[matches[sample].trainIdx].pt
+            tmp = np.array([[1, 0, x2 - x1],[ 0, 1, y2 - y1], [0, 0, 1]])
         
         # full homographies (m == eHomography)
         elif m == eHomography:
-            samples = []
-            samples.append(random.sample( range(0,len(matches)-1) , 1))
-            samples.append(random.sample( range(0,len(matches)-1) , 1))
-            samples.append(random.sample( range(0,len(matches)-1) , 1))
-            samples.append(random.sample( range(0,len(matches)-1) , 1))
+            match = []
+            while len(match) < 4:
+                sample = random.randint(0, len(matches) - 1)
+                if matches[sample] not in match:
+                    match.append(matches[sample])
+            tmp = computeHomography(f1, f2, match)
 
-            for sample in samples:
-                new_match = []
-                new_match.append(matches[sample[0]])
-
-            tmp = computeHomography(f1,f2,new_match)
+        inlier_indices = getInliers(f1, f2, matches, tmp, RANSACthresh)
         
-    max_in = -1
-    inliers = []
-        
-    inlier = getInliers(f1, f2, matches, tmp, RANSACthresh)
-    print(inlier)
-
-    if  len(inlier) > max_in:
-        max_in = len(inlier)
-        best_inlier = inlier
+        if len(inlier_indices) > len(best_inlier):
+            best_inlier = inlier_indices
     
     M = leastSquaresFit(f1, f2, matches, m, best_inlier)
-    #TODO-BLOCK-END
     return M
 
 def getInliers(f1, f2, matches, M, RANSACthresh):
@@ -175,17 +162,27 @@ def getInliers(f1, f2, matches, M, RANSACthresh):
 
     for i in range(len(matches)):
         # TODO 5: Determine if the ith matched feature f1[id1] is an inlier
-        pt1 = np.array(f1[i].pt)
-        pt2 = np.array(f2[i].pt)
-        pt3 = np.array([pt1[0],pt1[1],1]).T
+        # pt1 = np.array(f1[i].pt)
+        # pt2 = np.array(f2[i].pt)
+        # pt3 = np.array([pt1[0],pt1[1],1]).T
 
-        # transformed by M
-        x,y,_ = np.dot(M,pt3)
+        # # transformed by M
+        # x,y,_ = np.dot(M,pt3)
         
-        # within RANSACthresh of its match in f2.
-        dist = np.linalg.norm(np.array([x,y])-pt2)
+        # # within RANSACthresh of its match in f2.
+        # dist = np.linalg.norm(np.array([x,y])-pt2)
 
-        # append i to inliers
+        # # append i to inliers
+        # if dist < RANSACthresh:
+        #     inlier_indices.append(i)
+        peer = matches[i]
+
+        pt1 = f1[peer.queryIdx].pt
+        pt2 = np.array(f2[peer.trainIdx].pt)
+        pt3 = np.array([pt1[0], pt1[1], 1]).T
+        pt4 = M.dot(pt3)
+        x, y = [pt4[0], pt4[1]] / pt4[2]
+        dist = np.linalg.norm(np.array([x, y]) - pt2)
         if dist < RANSACthresh:
             inlier_indices.append(i)
         #END TODO
