@@ -45,3 +45,43 @@ Saving depth to output/Flowers_depth.npy
 
 
 
+
+
+
+OVERALL
+
+Run the following test and passed all the tests in 24 seconds.
+> nosetests -v
+
+tests.anticorrelated_ncc_test ... ok
+tests.compute_photometric_stereo_angle_test ... ok
+tests.compute_photometric_stereo_full_test ... ok
+tests.compute_photometric_stereo_half_albedo_test ... ok
+tests.compute_photometric_stereo_test ... ok
+tests.correlated_ncc_test ... ok
+tests.ncc_full_identity_test ... ok
+tests.ncc_full_offset_test ... ok
+tests.ncc_full_shapes_test ... ok
+tests.offset_and_scale_ncc_test ... ok
+tests.offset_ncc_test ... ok
+tests.preprocess_ncc_delta_test ... ok
+tests.preprocess_ncc_full_test ... ok
+tests.preprocess_ncc_uniform_test ... ok
+tests.preprocess_ncc_zeros_test ... ok
+tests.project_Rt_identity_20x10_test ... ok
+tests.project_Rt_identity_centered_test ... ok
+tests.project_Rt_identity_upperleft_test ... ok
+tests.project_Rt_identity_xoff_test ... ok
+tests.project_Rt_identity_yoff_test ... ok
+tests.project_Rt_rot180_upperleft_test ... ok
+tests.project_Rt_rot90_upperleft_test ... ok
+tests.project_unproject_Rt_identity_randdepth_test ... ok
+tests.project_unproject_Rt_identity_test ... ok
+tests.project_unproject_Rt_random_randdepth_test ... ok
+tests.scale_ncc_test ... ok
+tests.zero_ncc_test ... ok
+
+----------------------------------------------------------------------
+Ran 27 tests in 24.196s
+
+OK
