@@ -82,13 +82,13 @@ def project_impl(K, Rt, points):
 
     for i in range(height):
         for j in range(width):
-
             p = np.append(points[i, j], 1)
             p = M.dot(p)
             projections[i, j, 0] = p[0] / p[2]
             projections[i, j, 1] = p[1] / p[2]
     
     return projections
+
 
 def preprocess_ncc_impl(image, ncc_size):
     """
@@ -140,7 +140,27 @@ def preprocess_ncc_impl(image, ncc_size):
         normalized -- heigth x width x (channels * ncc_size**2) array
     """
 
-   
+    half = ncc_size//2
+    height, width, channels = np.shape(image)
+    
+    normalized = np.zeros((height, width, ncc_size, ncc_size, channels))
+    
+    # Compute and subtract the mean
+    for i in range(half, height-half):
+        for j in range(half, width-half):
+            normalized[i][j] = np.copy(image[i-half:i+half+1 , j-half:j+half+1 , :])
+    
+    normalized = np.reshape(normalized,(height, width, ncc_size**2, channels))
+    normalized = np.swapaxes(normalized,2,3)
+    normalized -= np.mean(normalized, axis = 3, keepdims = True)
+
+    # Normalize the vector
+    norms = np.linalg.norm(normalized,axis = (2,3))
+    norms = np.reshape(norms, (height,width,1,1))
+    normalized /= np.maximum(1e-6,norms)
+    normalized = np.reshape(normalized, (height, width, channels*ncc_size**2))
+    
+    return normalized
 
 
 
@@ -156,11 +176,6 @@ def compute_ncc_impl(image1, image2):
         ncc -- height x width normalized cross correlation between image1 and
                image2.
     """
-    height, width, channels = image1.shape
-
-    ncc1 = np.multiply(image1.reshape(height*width, -1), image2.reshape(height*width, -1))
-    ncc2 = np.sum(ncc1, axis = 1)
-    ncc = ncc2.reshape(height,width)
-
+    vec = image1 * image2
+    ncc = np.sum(vec, axis = 2)
     return ncc
-
