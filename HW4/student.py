@@ -33,30 +33,33 @@ def compute_photometric_stereo_impl(lights, images):
                    the input images.
     """
 
-    shape_l = np.shape(lights)
-    N,height,width,num_channels = np.shape(images)
+    # do not use nested for loops around weight, height and channels
+    # use vectorization instead to make the computation much faster
 
-    rshp_images = np.reshape(images, (N,height*width*num_channels))
+    # shape_l = np.shape(lights)
+    N, height, width, channels = np.shape(images)
+
+    rshp_images = np.reshape(images, (N,height * width * channels))
 
     # G = np.dot(np.linalg.inv(np.dot(lights.T, lights)), np.dot(lights.T, I))
     # kd = np.linalg.norm(G)
 
-    LLinv_new =  np.linalg.inv(np.dot(lights.T, lights))
-
     # LLinv =  np.linalg.inv(np.dot(lights, np.transpose(lights)))
     # LLinv_t_L = np.dot(LLinv, lights)
-    G_new = np.dot(LLinv_new, np.dot(lights.T, rshp_images))
-
     # G = np.dot(LLinv_t_L,rshp_images)
 
-    G3chan = np.reshape(G_new.T,(height,width,num_channels,3))
-    albedo = np.linalg.norm(G3chan , axis = 3)
+    G_new = np.dot(np.linalg.inv(np.dot(lights.T, lights)), np.dot(lights.T, rshp_images))
+
+    # color images
+    color = np.reshape(G_new.T,(height,width,channels,3))
+    albedo = np.linalg.norm(color , axis = 3)
     
-    Ggrayscale = np.mean(G3chan, axis=2)
-    albedo_for_norm = np.linalg.norm(Ggrayscale, axis = 2)
+    # grayscale images
+    grayscale = np.mean(color, axis=2)
+    albedo_for_norm = np.linalg.norm(grayscale, axis = 2)
     bools = albedo_for_norm < 1e-7
     
-    normals = Ggrayscale/np.maximum(1e-7, albedo_for_norm[:,:,np.newaxis])
+    normals = grayscale/np.maximum(1e-7, albedo_for_norm[:,:,np.newaxis])
     normals[bools]=0
     
     return albedo, normals
